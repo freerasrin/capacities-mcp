@@ -1,31 +1,30 @@
 {
-	"name": "capacities-mcp",
-	"version": "1.0.1",
+	"name": "capacities-mcp-plus",
+	"version": "1.2.0",
 	"main": "dist/server.js",
 	"bin": {
-		"capacities-mcp": "dist/server.js"
+		"capacities-mcp-plus": "dist/server.js"
 	},
 	"scripts": {
 		"build": "tsc",
-		"prepublishOnly": "bun run build",
-		"start": "tsx src/server.ts",
-		"dev": "fastmcp dev src/server.ts",
-		"inspect": "fastmcp inspect src/server.ts",
+		"prepublishOnly": "npm run build",
+		"start": "node dist/server.js",
+		"dev": "tsx src/server.ts",
 		"lint": "biome check . && tsc --noEmit",
 		"test": "bun test",
 		"format": "biome check --write ."
 	},
-	"keywords": ["fastmcp", "mcp", "capacities"],
+	"keywords": ["mcp", "capacities", "modelcontextprotocol"],
 	"repository": {
-		"url": "git+https://github.com/jemgold/capacities-mcp.git"
+		"url": "git+https://github.com/Im-Hal-9K/capacities-mcp.git"
 	},
-	"author": "Jem Gold <591643+jemgold@users.noreply.github.com>",
-	"homepage": "https://github.com/jemgold/capacities-mcp",
+	"author": "Im-Hal-9K",
+	"homepage": "https://github.com/Im-Hal-9K/capacities-mcp",
 	"type": "module",
 	"license": "MIT",
-	"description": "A MCP server for Capacities",
+	"description": "Enhanced MCP server for Capacities with read object content support",
 	"dependencies": {
-		"fastmcp": "^1.27.3",
+		"@modelcontextprotocol/sdk": "^1.0.0",
 		"zod": "^3.24.4"
 	},
 	"release": {
