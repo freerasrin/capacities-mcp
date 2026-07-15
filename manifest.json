@@ -31,14 +31,6 @@
   },
   "tools": [
     {
-      "name": "capacities_list_spaces",
-      "description": "Get a list of all personal spaces in Capacities"
-    },
-    {
-      "name": "capacities_get_space_info",
-      "description": "Get detailed information about a specific Capacities space including structures and collections"
-    },
-    {
       "name": "capacities_search",
       "description": "Search for content across Capacities spaces with optional filtering"
     },
@@ -47,12 +39,12 @@
       "description": "Retrieve the full content of a Capacities object by its ID"
     },
     {
-      "name": "capacities_save_weblink",
-      "description": "Save a web link to a Capacities space with optional title and tags"
+      "name": "capacities_append_to_daily_note",
+      "description": "Append markdown to the daily note for a given day (defaults to today), creating it automatically if it doesn't exist yet"
     },
     {
-      "name": "capacities_save_to_daily_note",
-      "description": "Add markdown text to today's daily note in a Capacities space"
+      "name": "capacities_get_daily_note",
+      "description": "Find and read the daily note for a given day (defaults to today)"
     }
   ],
   "keywords": [

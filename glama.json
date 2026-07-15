@@ -1,34 +1,50 @@
 {
 	"name": "Capacities MCP Plus",
-	"description": "Enhanced MCP server for Capacities knowledge management. List spaces, search content, read full object content, save weblinks, and manage daily notes.",
+	"description": "Enhanced MCP server for Capacities knowledge management, built on Capacities' v1 API. Search content, read full object content, create pages/tasks/objects, and manage daily notes (auto-creating them as needed).",
 	"author": "Im-Hal-9K",
 	"repository": "https://github.com/Im-Hal-9K/capacities-mcp",
 	"npm": "capacities-mcp-plus",
 	"categories": ["knowledge-management", "note-taking", "productivity"],
 	"tools": [
 		{
-			"name": "capacities_list_spaces",
-			"description": "Get a list of all personal spaces in Capacities"
-		},
-		{
-			"name": "capacities_get_space_info",
-			"description": "Get detailed information about a specific space"
-		},
-		{
 			"name": "capacities_search",
-			"description": "Search for content across Capacities spaces"
+			"description": "Search for content across a Capacities space"
 		},
 		{
 			"name": "capacities_read_object_content",
 			"description": "Retrieve the full content of a Capacities object by ID"
 		},
 		{
-			"name": "capacities_save_weblink",
-			"description": "Save a web link to a space with optional metadata"
+			"name": "capacities_get_daily_note",
+			"description": "Find and read the daily note for a given day (defaults to today)"
 		},
 		{
-			"name": "capacities_save_to_daily_note",
-			"description": "Add markdown content to today's daily note"
+			"name": "capacities_get_object_link",
+			"description": "Retrieve an object and generate a shareable link to it"
+		},
+		{
+			"name": "capacities_append_to_daily_note",
+			"description": "Append markdown to the daily note for a given day, creating it automatically if it doesn't exist yet"
+		},
+		{
+			"name": "capacities_create_page",
+			"description": "Create a new Page object with markdown content"
+		},
+		{
+			"name": "capacities_create_task",
+			"description": "Create a Task object with status, priority, and dates"
+		},
+		{
+			"name": "capacities_create_object",
+			"description": "Create any custom object type using markdown with YAML frontmatter"
+		},
+		{
+			"name": "capacities_append_to_object",
+			"description": "Append markdown to the body of an existing object"
+		},
+		{
+			"name": "capacities_update_object",
+			"description": "Update writable properties on an existing object via YAML frontmatter"
 		}
 	]
 }

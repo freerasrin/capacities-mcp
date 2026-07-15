@@ -1,6 +1,6 @@
 {
 	"name": "capacities-mcp-plus",
-	"version": "1.2.0",
+	"version": "1.4.0",
 	"main": "dist/server.js",
 	"bin": {
 		"capacities-mcp-plus": "dist/server.js"
@@ -22,7 +22,7 @@
 	"homepage": "https://github.com/Im-Hal-9K/capacities-mcp",
 	"type": "module",
 	"license": "MIT",
-	"description": "Enhanced MCP server for Capacities with read object content support",
+	"description": "Enhanced MCP server for Capacities with full read/write support for objects, pages, and tasks",
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.0.0",
 		"zod": "^3.24.4"
