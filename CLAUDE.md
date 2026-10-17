@@ -51,7 +51,7 @@ cp .env.example .env
 - `capacities_append_to_daily_note` → `POST /blocks/daily-note/append` (auto-creates the day's note; async)
 - `capacities_create_page` / `capacities_create_task` → `POST /object/markdown` (`RootPage` / `RootTask`)
   - The title is YAML-quoted, and the returned title is verified; if the API dropped it, a follow-up `PATCH /object/markdown` sets it. (Fixes the old "title silently dropped" bug — no manual `update_object` needed.)
-  - `status`: "todo" | "done"; `priority`: "low" | "medium" | "high"; `dueDate` / `deadlineDate`: YYYY-MM-DD
+  - `status` "todo"/"done" maps to RootTask label ids `not-started`/`done`; `dueDate`/`deadlineDate` map to the `date`/`deadline` properties. The API silently drops unknown keys and label ids, so always use real property keys (see `get_object_type_shape`). Daily notes cannot be deleted via the API (400); remove test content with `delete_block`.
 - `capacities_create_object` → `POST /object/markdown` (any type; pass full markdown with YAML frontmatter as `mdText`; `RootDailyNote` cannot be created this way)
 - `capacities_create_from_url` → `POST /object/url` (`url`, optional `title`, `description`, `mdText`)
 - `capacities_append_to_object` → `POST /blocks/append` (TextBlocks; rich formatting is flattened)

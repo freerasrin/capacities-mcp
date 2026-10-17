@@ -354,10 +354,15 @@ async function handleCreatePage(args: Args<typeof createPageSchema>) {
 
 async function handleCreateTask(args: Args<typeof createTaskSchema>) {
 	const lines: string[] = [];
-	if (args.status) lines.push(`status: ${args.status}`);
+	// RootTask property keys (verified live): status label ids are
+	// not-started|next-up|in-progress|on-hold|done, dates are `date`/`deadline`.
+	// Unknown keys/ids are silently dropped by the API, so map exactly.
+	if (args.status) {
+		lines.push(`status: ${args.status === "todo" ? "not-started" : "done"}`);
+	}
 	if (args.priority) lines.push(`priority: ${args.priority}`);
-	if (args.dueDate) lines.push(`dueDate: ${args.dueDate}`);
-	if (args.deadlineDate) lines.push(`deadlineDate: ${args.deadlineDate}`);
+	if (args.dueDate) lines.push(`date: ${args.dueDate}`);
+	if (args.deadlineDate) lines.push(`deadline: ${args.deadlineDate}`);
 	return createWithTitle(
 		"RootTask",
 		args.title,

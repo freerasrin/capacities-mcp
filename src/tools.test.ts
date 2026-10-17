@@ -131,12 +131,14 @@ describe("create_task / create_page", () => {
 			title: "Fix: bug #1",
 			status: "todo",
 			priority: "high",
+			dueDate: "2099-01-01",
+			deadlineDate: "2099-01-02",
 		});
 		expect(calls).toHaveLength(1);
 		expect(calls[0].url).toBe("https://api.capacities.io/object/markdown");
 		expect(body(0).structureId).toBe("RootTask");
 		expect(body(0).markdown).toBe(
-			'---\ntitle: "Fix: bug #1"\nstatus: todo\npriority: high\n---\n',
+			'---\ntitle: "Fix: bug #1"\nstatus: not-started\npriority: high\ndate: 2099-01-01\ndeadline: 2099-01-02\n---\n',
 		);
 	});
 
