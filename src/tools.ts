@@ -477,6 +477,313 @@ async function handleGetObjectTypeShape(args: Args<typeof typeShapeSchema>) {
 	return JSON.stringify({ structures }, null, 2);
 }
 
+// --- Net-new v1 tools -------------------------------------------------------
+
+const deleteObjectSchema = z.object({
+	objectId: id("objectId"),
+	hardDelete: z.boolean().optional(),
+});
+
+const createFromUrlSchema = z.object({
+	url: z.string().trim().url("url must be a valid URL"),
+	title: z.string().min(1).optional(),
+	description: z.string().optional(),
+	mdText: z.string().max(200000).optional(),
+});
+
+const pagination = {
+	cursor: z.string().trim().min(1).optional(),
+	pageSize: z.number().int().min(1).max(100).optional(),
+};
+
+const listByTypeSchema = z.object({
+	structureId: id("structureId"),
+	...pagination,
+});
+const listByTagSchema = z.object({ tagId: id("tagId"), ...pagination });
+const listByCollectionSchema = z.object({
+	collectionId: id("collectionId"),
+	...pagination,
+});
+
+const updateBlockSchema = z
+	.object({
+		objectId: id("objectId"),
+		blockId: id("blockId"),
+		propertyId: z.string().trim().min(1).optional(),
+		text: z.string().min(1).optional(),
+		block: z
+			.object({ type: z.string().min(1) })
+			.passthrough()
+			.optional(),
+	})
+	.refine((v) => (v.text === undefined) !== (v.block === undefined), {
+		message: "provide exactly one of 'text' or 'block'",
+		path: ["text"],
+	});
+
+const deleteBlockSchema = z.object({
+	objectId: id("objectId"),
+	blockId: id("blockId"),
+});
+
+const getSpaceSchema = z.object({});
+
+async function handleDeleteObject(args: Args<typeof deleteObjectSchema>) {
+	const response = await makeApiRequest(
+		`/object${buildQuery({ id: args.objectId, hardDelete: args.hardDelete })}`,
+		{ method: "DELETE" },
+	);
+	return parseResponse(
+		response,
+		args.hardDelete
+			? "Object permanently deleted"
+			: "Object moved to trash (pass hardDelete=true to delete permanently)",
+	);
+}
+
+async function handleCreateFromUrl(args: Args<typeof createFromUrlSchema>) {
+	const body: Record<string, unknown> = { url: args.url };
+	const properties: Record<string, unknown> = {};
+	if (args.title !== undefined) {
+		properties.title = { type: "title", title: { value: args.title } };
+	}
+	if (args.description !== undefined) {
+		properties.description = {
+			type: "text",
+			text: { value: args.description },
+		};
+	}
+	if (Object.keys(properties).length > 0) body.properties = properties;
+	if (args.mdText) body.markdown = args.mdText;
+	return postAndReturn("/object/url", body, "Object created from URL");
+}
+
+async function listObjects(
+	endpoint: string,
+	objectId: string,
+	args: { cursor?: string; pageSize?: number },
+) {
+	const response = await makeApiRequest(
+		`${endpoint}${buildQuery({ id: objectId, cursor: args.cursor, pageSize: args.pageSize })}`,
+	);
+	return parseResponse(response, "Objects listed");
+}
+
+async function handleListByType(args: Args<typeof listByTypeSchema>) {
+	return listObjects("/objects/structure", args.structureId, args);
+}
+async function handleListByTag(args: Args<typeof listByTagSchema>) {
+	return listObjects("/objects/tag", args.tagId, args);
+}
+async function handleListByCollection(
+	args: Args<typeof listByCollectionSchema>,
+) {
+	return listObjects("/objects/collection", args.collectionId, args);
+}
+
+async function handleUpdateBlock(args: Args<typeof updateBlockSchema>) {
+	const block =
+		args.block ??
+		({
+			type: "TextBlock",
+			tokens: [{ type: "TextToken", text: args.text, style: {} }],
+			hierarchy: { key: "Base", val: 0 },
+		} as Record<string, unknown>);
+	const body: Record<string, unknown> = {
+		id: args.objectId,
+		blockId: args.blockId,
+		block,
+	};
+	if (args.propertyId) body.propertyId = args.propertyId;
+	const response = await makeApiRequest("/blocks/block", {
+		method: "PATCH",
+		body: JSON.stringify(body),
+	});
+	return parseResponse(response, "Block updated");
+}
+
+async function handleDeleteBlock(args: Args<typeof deleteBlockSchema>) {
+	const response = await makeApiRequest(
+		`/block${buildQuery({ objectId: args.objectId, blockId: args.blockId })}`,
+		{ method: "DELETE" },
+	);
+	return parseResponse(response, "Block deleted");
+}
+
+async function handleGetSpace() {
+	const response = await makeApiRequest("/space");
+	return parseResponse(response, "Space retrieved");
+}
+
+const listPagingProps = {
+	cursor: {
+		type: "string",
+		description:
+			"Pagination cursor: pass the nextCursor from the previous page.",
+	},
+	pageSize: {
+		type: "number",
+		description: "Results per page (1-100, default 100).",
+	},
+};
+
+const NET_NEW_TOOLS: ToolDefinition[] = [
+	{
+		name: "capacities_delete_object",
+		description:
+			"Delete an object. By default it is moved to trash (recoverable); pass hardDelete=true to delete permanently (irreversible). Confirm with the user before hard-deleting.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				objectId: {
+					type: "string",
+					description: "UUID of the object to delete",
+				},
+				hardDelete: {
+					type: "boolean",
+					description:
+						"If true, permanently delete instead of moving to trash. Default: false",
+				},
+			},
+			required: ["objectId"],
+		},
+		schema: deleteObjectSchema,
+		handler: handleDeleteObject as ToolHandler,
+	},
+	{
+		name: "capacities_create_from_url",
+		description:
+			"Save a URL as a weblink/media object (replaces the old save_weblink). Optionally override the title/description and add markdown notes.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				url: { type: "string", description: "The URL to save" },
+				title: { type: "string", description: "Optional title override" },
+				description: {
+					type: "string",
+					description: "Optional description override",
+				},
+				mdText: {
+					type: "string",
+					description: "Optional markdown added to the object's notes",
+				},
+			},
+			required: ["url"],
+		},
+		schema: createFromUrlSchema,
+		handler: handleCreateFromUrl as ToolHandler,
+	},
+	{
+		name: "capacities_list_objects_by_type",
+		description:
+			"List object summaries (id, structureId, title) of a given type, 100 at a time. Get structure IDs from capacities_get_object_type_shape (or built-ins like RootPage, RootTask).",
+		inputSchema: {
+			type: "object",
+			properties: {
+				structureId: {
+					type: "string",
+					description: "Structure ID, e.g. 'RootPage' or a custom type UUID",
+				},
+				...listPagingProps,
+			},
+			required: ["structureId"],
+		},
+		schema: listByTypeSchema,
+		handler: handleListByType as ToolHandler,
+	},
+	{
+		name: "capacities_list_objects_by_tag",
+		description:
+			"List object summaries that carry a given tag, 100 at a time. Tags are objects of type RootTag; find a tag's ID with capacities_search (structureIds ['RootTag']).",
+		inputSchema: {
+			type: "object",
+			properties: {
+				tagId: { type: "string", description: "UUID of the tag object" },
+				...listPagingProps,
+			},
+			required: ["tagId"],
+		},
+		schema: listByTagSchema,
+		handler: handleListByTag as ToolHandler,
+	},
+	{
+		name: "capacities_list_objects_by_collection",
+		description:
+			"List object summaries in a collection (database), 100 at a time. Collection IDs come from capacities_get_object_type_shape.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				collectionId: {
+					type: "string",
+					description: "UUID of the collection",
+				},
+				...listPagingProps,
+			},
+			required: ["collectionId"],
+		},
+		schema: listByCollectionSchema,
+		handler: handleListByCollection as ToolHandler,
+	},
+	{
+		name: "capacities_update_block",
+		description:
+			"Replace the content of a single block in an object. Block IDs come from the object's blocks (GET /object via capacities_get_object_link's objectData). Provide either 'text' (plain-text replacement) or 'block' (a full Capacities block JSON, e.g. {type:'TextBlock',tokens:[...],hierarchy:{key:'Base',val:0}}).",
+		inputSchema: {
+			type: "object",
+			properties: {
+				objectId: {
+					type: "string",
+					description: "UUID of the object containing the block",
+				},
+				blockId: { type: "string", description: "ID of the block to update" },
+				propertyId: {
+					type: "string",
+					description:
+						"Optional property definition id that contains the block",
+				},
+				text: {
+					type: "string",
+					description: "Plain text to replace the block with (TextBlock)",
+				},
+				block: {
+					type: "object",
+					description: "Full replacement block JSON (alternative to 'text')",
+				},
+			},
+			required: ["objectId", "blockId"],
+		},
+		schema: updateBlockSchema,
+		handler: handleUpdateBlock as ToolHandler,
+	},
+	{
+		name: "capacities_delete_block",
+		description:
+			"Delete a single block (including nested child blocks) from an object. Irreversible.",
+		inputSchema: {
+			type: "object",
+			properties: {
+				objectId: {
+					type: "string",
+					description: "UUID of the object containing the block",
+				},
+				blockId: { type: "string", description: "ID of the block to delete" },
+			},
+			required: ["objectId", "blockId"],
+		},
+		schema: deleteBlockSchema,
+		handler: handleDeleteBlock as ToolHandler,
+	},
+	{
+		name: "capacities_get_space",
+		description:
+			"Get information (id, title, icon) about the space the API token is scoped to.",
+		inputSchema: { type: "object", properties: {}, required: [] },
+		schema: getSpaceSchema,
+		handler: handleGetSpace as ToolHandler,
+	},
+];
+
 // ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
@@ -742,6 +1049,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
 		schema: getDailySchema,
 		handler: handleGetDailyNote as ToolHandler,
 	},
+	...NET_NEW_TOOLS,
 ];
 
 export const TOOLS = TOOL_DEFINITIONS.map(

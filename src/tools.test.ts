@@ -253,3 +253,155 @@ describe("unchanged tools", () => {
 		expect(body(0).blocks).toHaveLength(2);
 	});
 });
+
+describe("net-new v1 tools", () => {
+	const URL_BASE = "https://api.capacities.io";
+
+	test("delete_object defaults to trash, no hardDelete param", async () => {
+		queue("");
+		const out = await callTool("capacities_delete_object", { objectId: OBJ });
+		expect(calls[0].url).toBe(`${URL_BASE}/object?id=${OBJ}`);
+		expect(calls[0].init?.method).toBe("DELETE");
+		expect(out).toContain("trash");
+	});
+
+	test("delete_object hardDelete", async () => {
+		queue("");
+		await callTool("capacities_delete_object", {
+			objectId: OBJ,
+			hardDelete: true,
+		});
+		expect(calls[0].url).toBe(`${URL_BASE}/object?id=${OBJ}&hardDelete=true`);
+	});
+
+	test("create_from_url builds properties and markdown", async () => {
+		queue({ id: OBJ });
+		await callTool("capacities_create_from_url", {
+			url: "https://example.com/a",
+			title: "T",
+			description: "D",
+			mdText: "notes",
+		});
+		expect(calls[0].url).toBe(`${URL_BASE}/object/url`);
+		expect(calls[0].init?.method).toBe("POST");
+		expect(body(0)).toEqual({
+			url: "https://example.com/a",
+			properties: {
+				title: { type: "title", title: { value: "T" } },
+				description: { type: "text", text: { value: "D" } },
+			},
+			markdown: "notes",
+		});
+	});
+
+	test("create_from_url minimal body and URL validation", async () => {
+		queue({ id: OBJ });
+		await callTool("capacities_create_from_url", {
+			url: "https://example.com",
+		});
+		expect(body(0)).toEqual({ url: "https://example.com" });
+		await expect(
+			callTool("capacities_create_from_url", { url: "not a url" }),
+		).rejects.toThrow("url");
+	});
+
+	test("list_objects_by_type", async () => {
+		queue({ results: [], nextCursor: null, hasMore: false });
+		await callTool("capacities_list_objects_by_type", {
+			structureId: "RootPage",
+			pageSize: 10,
+		});
+		expect(calls[0].url).toBe(
+			`${URL_BASE}/objects/structure?id=RootPage&pageSize=10`,
+		);
+		expect(calls[0].init?.method).toBeUndefined();
+	});
+
+	test("list_objects_by_tag with cursor", async () => {
+		queue({ results: [], nextCursor: null, hasMore: false });
+		await callTool("capacities_list_objects_by_tag", {
+			tagId: OBJ,
+			cursor: "c-1",
+		});
+		expect(calls[0].url).toBe(`${URL_BASE}/objects/tag?id=${OBJ}&cursor=c-1`);
+	});
+
+	test("list_objects_by_collection", async () => {
+		queue({ results: [] });
+		await callTool("capacities_list_objects_by_collection", {
+			collectionId: OBJ,
+		});
+		expect(calls[0].url).toBe(`${URL_BASE}/objects/collection?id=${OBJ}`);
+	});
+
+	test("list tools validate pageSize bounds", async () => {
+		await expect(
+			callTool("capacities_list_objects_by_tag", { tagId: OBJ, pageSize: 500 }),
+		).rejects.toThrow("pageSize");
+	});
+
+	test("update_block with text", async () => {
+		queue({ id: OBJ });
+		await callTool("capacities_update_block", {
+			objectId: OBJ,
+			blockId: "b1",
+			text: "new",
+		});
+		expect(calls[0].url).toBe(`${URL_BASE}/blocks/block`);
+		expect(calls[0].init?.method).toBe("PATCH");
+		expect(body(0)).toEqual({
+			id: OBJ,
+			blockId: "b1",
+			block: {
+				type: "TextBlock",
+				tokens: [{ type: "TextToken", text: "new", style: {} }],
+				hierarchy: { key: "Base", val: 0 },
+			},
+		});
+	});
+
+	test("update_block with raw block + propertyId", async () => {
+		queue({ id: OBJ });
+		const block = { type: "CodeBlock", code: "x" };
+		await callTool("capacities_update_block", {
+			objectId: OBJ,
+			blockId: "b1",
+			propertyId: "p",
+			block,
+		});
+		expect(body(0)).toEqual({ id: OBJ, blockId: "b1", propertyId: "p", block });
+	});
+
+	test("update_block requires exactly one of text/block", async () => {
+		await expect(
+			callTool("capacities_update_block", { objectId: OBJ, blockId: "b1" }),
+		).rejects.toThrow("exactly one");
+		await expect(
+			callTool("capacities_update_block", {
+				objectId: OBJ,
+				blockId: "b1",
+				text: "a",
+				block: { type: "TextBlock" },
+			}),
+		).rejects.toThrow("exactly one");
+	});
+
+	test("delete_block", async () => {
+		queue({ id: OBJ });
+		await callTool("capacities_delete_block", {
+			objectId: OBJ,
+			blockId: "b/1",
+		});
+		expect(calls[0].url).toBe(
+			`${URL_BASE}/block?objectId=${OBJ}&blockId=b%2F1`,
+		);
+		expect(calls[0].init?.method).toBe("DELETE");
+	});
+
+	test("get_space", async () => {
+		queue({ id: "s", title: "Notes" });
+		const out = JSON.parse(await callTool("capacities_get_space", {}));
+		expect(calls[0].url).toBe(`${URL_BASE}/space`);
+		expect(out.title).toBe("Notes");
+	});
+});
