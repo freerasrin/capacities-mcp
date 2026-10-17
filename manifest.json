@@ -3,7 +3,7 @@
 	"manifest_version": "0.3",
 	"name": "capacities-mcp",
 	"display_name": "Capacities",
-	"version": "1.2.0",
+	"version": "1.5.0",
 	"description": "Connect Claude to your Capacities knowledge base for searching, reading, and saving content.",
 	"long_description": "Access your Capacities knowledge management system directly from Claude. Search across spaces, read object content, save weblinks, and add notes to your daily journal - all through natural language:\n* **Search your knowledge base** - Find content across all your Capacities spaces\n* **Read full content** - Retrieve the complete content of any object by ID\n* **Save weblinks** - Bookmark URLs with custom titles, descriptions, and tags\n* **Daily notes** - Add markdown content to today's daily note\n* **Space management** - List and explore your Capacities spaces and structures",
 	"author": {
@@ -43,6 +43,66 @@
 		{
 			"name": "capacities_get_daily_note",
 			"description": "Find and read the daily note for a given day (defaults to today)"
+		},
+		{
+			"name": "capacities_get_object_type_shape",
+			"description": "List object types with writable properties and collections"
+		},
+		{
+			"name": "capacities_get_space",
+			"description": "Get info about the space the token is scoped to"
+		},
+		{
+			"name": "capacities_get_object_link",
+			"description": "Retrieve an object and generate a link to it"
+		},
+		{
+			"name": "capacities_create_page",
+			"description": "Create a new Page object with markdown content"
+		},
+		{
+			"name": "capacities_create_task",
+			"description": "Create a Task object with status, priority, and dates"
+		},
+		{
+			"name": "capacities_create_object",
+			"description": "Create any object type using markdown with YAML frontmatter"
+		},
+		{
+			"name": "capacities_create_from_url",
+			"description": "Save a URL as a weblink object (replaces save_weblink)"
+		},
+		{
+			"name": "capacities_append_to_object",
+			"description": "Append markdown to the body of an existing object"
+		},
+		{
+			"name": "capacities_update_object",
+			"description": "Update writable properties via YAML frontmatter"
+		},
+		{
+			"name": "capacities_update_block",
+			"description": "Replace the content of a single block"
+		},
+		{
+			"name": "capacities_delete_block",
+			"description": "Delete a single block"
+		},
+		{
+			"name": "capacities_delete_object",
+			"description": "Delete an object (trash by default, optional permanent delete)"
+		},
+		{
+			"name": "capacities_list_objects_by_type",
+			"description": "List objects of a given type (paginated)"
+		},
+		{
+			"name": "capacities_list_objects_by_tag",
+			"description": "List objects with a given tag (paginated)"
+		},
+		{
+			"name": "capacities_list_objects_by_collection",
+			"description": "List objects in a collection (paginated)"
 		}
 	],
 	"keywords": [

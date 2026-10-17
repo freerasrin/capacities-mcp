@@ -45,6 +45,42 @@
 		{
 			"name": "capacities_update_object",
 			"description": "Update writable properties on an existing object via YAML frontmatter"
+		},
+		{
+			"name": "capacities_get_object_type_shape",
+			"description": "List object types with writable properties and collections"
+		},
+		{
+			"name": "capacities_get_space",
+			"description": "Get info about the space the token is scoped to"
+		},
+		{
+			"name": "capacities_create_from_url",
+			"description": "Save a URL as a weblink object (replaces save_weblink)"
+		},
+		{
+			"name": "capacities_update_block",
+			"description": "Replace the content of a single block"
+		},
+		{
+			"name": "capacities_delete_block",
+			"description": "Delete a single block"
+		},
+		{
+			"name": "capacities_delete_object",
+			"description": "Delete an object (trash by default, optional permanent delete)"
+		},
+		{
+			"name": "capacities_list_objects_by_type",
+			"description": "List objects of a given type (paginated)"
+		},
+		{
+			"name": "capacities_list_objects_by_tag",
+			"description": "List objects with a given tag (paginated)"
+		},
+		{
+			"name": "capacities_list_objects_by_collection",
+			"description": "List objects in a collection (paginated)"
 		}
 	]
 }

@@ -13,10 +13,10 @@ An enhanced MCP (Model Context Protocol) server for [Capacities](https://capacit
 Capacities is retiring its old **Beta API** on **September 1, 2026** in favor of a new, space-scoped **v1 API**. This server has been migrated accordingly:
 
 - Every tool now calls the current v1 endpoints under `https://api.capacities.io`.
-- The four tools that only exist in the deprecated Beta API (`capacities_list_spaces`, `capacities_get_space_info`, `capacities_save_weblink`, `capacities_save_to_daily_note`) are **disabled** — commented out in `src/server.ts`, not removed — because they require an old *legacy Public API token* that v1 tokens can't satisfy. Space-scoped v1 tokens get a `401 cap_not_authenticated` from them.
+- The four tools that only exist in the deprecated Beta API (`capacities_list_spaces`, `capacities_get_space_info`, `capacities_save_weblink`, `capacities_save_to_daily_note`) are **not registered**, because they require an old *legacy Public API token* that v1 tokens can't satisfy. Each has a v1 replacement (see [Legacy tools](#legacy-tools-not-registered)).
 - Daily notes got a proper upgrade: `capacities_append_to_daily_note` wraps the v1 `/blocks/daily-note/append` endpoint, which **creates the day's note automatically if it doesn't exist yet** — no more juggling search-then-append just to find out a note isn't there.
 
-See [Legacy tools (disabled)](#legacy-tools-disabled) below for the full rundown, and [Migration Notes](#migration-notes) if you're upgrading from an older version of this server.
+See [Legacy tools](#legacy-tools-not-registered) below for the full rundown, and [Migration Notes](#migration-notes) if you're upgrading from an older version of this server.
 
 ## Features
 
@@ -29,6 +29,11 @@ See [Legacy tools (disabled)](#legacy-tools-disabled) below for the full rundown
 - **Append to Objects** — Append markdown to the body of any existing object
 - **Update Objects** — Update writable properties on existing objects via YAML frontmatter
 - **Object Links** — Generate shareable Capacities URLs for any object
+- **Schema Discovery** — List object types, writable properties and collections (`capacities_get_object_type_shape`)
+- **Browse** — List objects by type, tag, or collection with cursor pagination
+- **Save URLs** — Create weblink objects from a URL (`capacities_create_from_url`)
+- **Delete / Edit Blocks** — Delete objects (trash or permanent), update or delete individual blocks
+- **Space Info** — Inspect the space the token is scoped to
 
 ## What's Different from the Original
 
@@ -145,7 +150,7 @@ Retrieve the full markdown content of a Capacities object by its ID.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `objectId` | string | ✓ | UUID of the object (from "Copy object reference" in Capacities, or from search results) |
-| `spaceId` | string | ✓ | UUID of the space containing the object |
+| `spaceId` | string | | Optional and advisory — v1 tokens are bound to one space |
 
 ---
 
@@ -166,14 +171,41 @@ Retrieve a specific object's data and generate a shareable link to open it in Ca
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `objectId` | string | ✓ | UUID of the object |
-| `spaceId` | string | ✓ | UUID of the space containing the object |
+| `spaceId` | string | | Optional and advisory — v1 tokens are bound to one space |
 
 **Example prompt:** *"Give me a link to my Cheesecake recipe in Capacities."*
+
+#### `capacities_get_object_type_shape`
+List the object types (structures) in the space with IDs, writable property definitions and collections (`GET /space/structures`). Call this before `capacities_create_object` / `capacities_update_object`.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `summary` | boolean | | Only names, IDs and collections (no property definitions) |
+| `structureIds` | string[] | | Only return these structures |
+| `excludeMediaTypes` | boolean | | Skip built-in `Media*` structures |
+
+---
+
+#### `capacities_get_space`
+Get id, title and icon of the space the token is scoped to (`GET /space`).
+
+---
+
+#### `capacities_list_objects_by_type` / `_by_tag` / `_by_collection`
+List object summaries (`id`, `structureId`, `title`) 100 at a time (`GET /objects/structure|tag|collection`).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `structureId` / `tagId` / `collectionId` | string | ✓ | The ID to list by (one per tool) |
+| `cursor` | string | | `nextCursor` from the previous page |
+| `pageSize` | number | | 1–100 (default 100) |
+
+---
 
 ### Write tools
 
 #### `capacities_append_to_daily_note`
-Append markdown content to the daily note for a given day (defaults to today) — **creates the note automatically if it doesn't exist yet.** This is the recommended way to work with daily notes; it's the v1 replacement for the disabled `capacities_save_to_daily_note`.
+Append markdown content to the daily note for a given day (defaults to today) — **creates the note automatically if it doesn't exist yet.** This is the recommended way to work with daily notes; it's the v1 replacement for the legacy `capacities_save_to_daily_note`.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -192,7 +224,7 @@ Create a new Page object with a title and optional markdown content.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `spaceId` | string | ✓ | UUID of the target space |
+| `spaceId` | string | | Optional and advisory — v1 tokens are bound to one space |
 | `title` | string | ✓ | Page title |
 | `mdText` | string | | Markdown content for the page body |
 
@@ -205,7 +237,7 @@ Create a Task object with optional status, priority, and dates.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `spaceId` | string | ✓ | UUID of the target space |
+| `spaceId` | string | | Optional and advisory — v1 tokens are bound to one space |
 | `title` | string | ✓ | Task title |
 | `status` | string | | `"todo"` or `"done"` |
 | `priority` | string | | `"low"`, `"medium"`, or `"high"` |
@@ -222,7 +254,7 @@ Create an object of any custom type (Meeting, Project, Book, etc.) using markdow
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `spaceId` | string | ✓ | UUID of the target space |
+| `spaceId` | string | | Optional and advisory — v1 tokens are bound to one space |
 | `structureId` | string | ✓ | ID of the object type to create |
 | `mdText` | string | ✓ | Markdown with optional YAML frontmatter for properties |
 
@@ -249,7 +281,7 @@ Use `capacities_search` (or `capacities_get_daily_note` for daily notes) to find
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `objectId` | string | ✓ | UUID of the object to append to |
-| `spaceId` | string | ✓ | UUID of the space containing the object |
+| `spaceId` | string | | Optional and advisory — v1 tokens are bound to one space |
 | `mdText` | string | ✓ | Markdown content to append |
 
 **Example prompt:** *"Append a summary of this conversation to my project note in Capacities."*
@@ -262,7 +294,7 @@ Update writable properties on an existing object using YAML frontmatter. Only li
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `objectId` | string | ✓ | UUID of the object to update |
-| `spaceId` | string | ✓ | UUID of the space containing the object |
+| `spaceId` | string | | Optional and advisory — v1 tokens are bound to one space |
 | `mdText` | string | ✓ | YAML frontmatter with properties to update |
 
 **Examples:**
@@ -278,29 +310,65 @@ status: Completed
 
 **Example prompt:** *"Set the status on my 'Context Engine' project in Capacities to Completed."*
 
-## Legacy tools (disabled)
+#### `capacities_create_from_url`
+Save a URL as a weblink/media object (`POST /object/url`) — the v1 replacement for `capacities_save_weblink`.
 
-The four tools below only work against Capacities' deprecated **Beta API**, which requires a *legacy Public API token* — a different credential from the v1 personal tokens this server otherwise uses. They're **commented out** in `src/server.ts` (tool definitions, handlers, and dispatch cases) rather than deleted, so they're easy to re-enable if you specifically configure a legacy token. Capacities is retiring the Beta API entirely on **2026-09-01**.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | ✓ | URL to save |
+| `title` | string | | Title override |
+| `description` | string | | Description override |
+| `mdText` | string | | Markdown notes to attach |
 
-| Tool | Beta endpoint | Status |
+---
+
+#### `capacities_delete_object`
+Delete an object (`DELETE /object`). Moves it to trash by default; `hardDelete: true` deletes permanently.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `objectId` | string | ✓ | UUID of the object |
+| `hardDelete` | boolean | | Permanently delete (irreversible) |
+
+---
+
+#### `capacities_update_block`
+Replace one block's content (`PATCH /blocks/block`). Provide exactly one of `text` (plain text) or `block` (full block JSON).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `objectId` | string | ✓ | UUID of the containing object |
+| `blockId` | string | ✓ | Block to update |
+| `propertyId` | string | | Property definition containing the block |
+| `text` / `block` | string / object | one of | Replacement content |
+
+---
+
+#### `capacities_delete_block`
+Delete one block, including nested children (`DELETE /block`). Parameters: `objectId`, `blockId` (both required).
+
+---
+
+## Legacy tools (not registered)
+
+These tools only worked against Capacities' deprecated **Beta API**, which requires a *legacy Public API token* — a different credential from the v1 personal tokens this server uses. They are no longer registered (the dead code was removed; see git history). The Beta API is retired on **2026-09-01**.
+
+| Legacy tool | Beta endpoint | v1 replacement |
 |------|----------------|--------|
-| `capacities_list_spaces` | `GET /spaces` | Disabled — no v1 equivalent needed; v1 tokens are already space-scoped |
-| `capacities_get_space_info` | `GET /space-info` | Disabled — no v1 equivalent wired up yet |
-| `capacities_save_weblink` | `POST /save-weblink` | Disabled — v1's `POST /object/url` uses a different (structured `properties`/`markdown`) shape, not a drop-in swap |
-| `capacities_save_to_daily_note` | `POST /save-to-daily-note` | **Replaced** by `capacities_append_to_daily_note` (v1 `/blocks/daily-note/append`) |
-
-If you were relying on `capacities_save_to_daily_note`, switch to `capacities_append_to_daily_note` — it's a strict upgrade (auto-creates missing notes, no legacy token needed).
+| `capacities_list_spaces` | `GET /spaces` | `capacities_get_space` (tokens are space-scoped) |
+| `capacities_get_space_info` | `GET /space-info` | `capacities_get_object_type_shape` |
+| `capacities_save_weblink` | `POST /save-weblink` | `capacities_create_from_url` |
+| `capacities_save_to_daily_note` | `POST /save-to-daily-note` | `capacities_append_to_daily_note` |
 
 ## Rate Limits
 
 | Endpoint | Limit |
 |----------|-------|
-| `/objects/search` | 120 req / 60 s |
-| `/blocks/daily-note/append` | 30 req / 60 s |
+| `/objects/search` | 30 req / 60 s |
+| `/blocks/daily-note/append`, `/blocks/*`, `/object`, `/objects/*` | 30 req / 60 s |
+| `/object/url` | 10 req / 60 s |
+| `/space`, `/space/structures` | 10 req / 60 s |
 | `/object/markdown` (POST/PATCH), `/blocks/append` | Shared 5,000 object creation quota (resets +100/month) |
-| *Legacy (disabled):* `/spaces`, `/space-info` | 5 req / 60 s |
-| *Legacy (disabled):* `/save-weblink` | 10 req / 60 s |
-| *Legacy (disabled):* `/save-to-daily-note` | 5 req / 60 s |
 
 ## Example Prompts
 
@@ -337,8 +405,9 @@ Upgrading from an older version of this server? Here's what changed:
 
 - **Tokens:** generate a new **v1 personal API token** (`Settings → Capacities API`) — the old account-wide Beta token won't work with the active tools anymore. See [Installation](#installation).
 - **Daily notes:** replace any `capacities_save_to_daily_note` usage with `capacities_append_to_daily_note`. Same idea (append markdown to a day's note), but it no longer needs the note to already exist, and it doesn't need the legacy token.
-- **Spaces & schema discovery:** `capacities_list_spaces` and `capacities_get_space_info` are disabled for now. If your workflow depended on discovering a `structureId` before calling `capacities_create_object`, you'll need to find it another way in the meantime (e.g. via **Settings → Capacities API → Developer settings → Show developer information** in the Capacities app, which surfaces `structureId`s in the UI).
-- **Weblinks:** `capacities_save_weblink` is disabled with no replacement yet. There's no scheduled timeline for adding v1 weblink support — contributions welcome.
+- **Spaces & schema discovery:** use `capacities_get_object_type_shape` to find `structureId`s and writable properties, and `capacities_get_space` for space info.
+- **Weblinks:** use `capacities_create_from_url` instead of `capacities_save_weblink`.
+- **`spaceId`:** now optional on every tool (tokens are space-scoped); it is only used to build app links.
 
 ## API Reference
 
